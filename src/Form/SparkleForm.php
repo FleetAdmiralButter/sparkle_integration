@@ -69,6 +69,9 @@ class SparkleForm extends FormBase {
 
             // Copy the new AppCast feed into place.
             copy($new_appcast_file_location, $appcast_file_location);
+
+            // Clean up the temporary file.
+            $file->delete();
         }
 
         // Finish by hydrating the CDN with new content.
@@ -80,6 +83,7 @@ class SparkleForm extends FormBase {
         } catch (\Exception $e) {
             \Drupal::service('messenger')->addError("Error connecting to QuantCDN");
         }
+
 
         
     }
