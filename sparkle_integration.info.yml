@@ -1,0 +1,6 @@
+name: Sparkle Integration
+type: module
+description: Provides sparkle update functionality.
+package: sparkle_integration
+core: 8.x
+core_version_requirement: ^8 || ^9

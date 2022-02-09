@@ -1,0 +1,3 @@
+administer app releases:
+  title: 'Administer app releases for Sparkle'
+  description: 'Push updates and changelogs on Sparkle endpoints'

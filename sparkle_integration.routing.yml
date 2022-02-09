@@ -1,0 +1,7 @@
+sparkle_integration.release:
+  path: /admin/sparkle/release
+  defaults:
+    _title: 'Release Manager'
+    _form: 'Drupal\sparkle_integration\Form\SparkleForm'
+  requirements:
+    _permission: 'administer app releases'
