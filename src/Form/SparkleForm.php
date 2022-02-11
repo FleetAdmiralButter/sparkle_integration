@@ -9,6 +9,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\file\Entity\File;
 use Drupal\Core\File\FileSystem;
 use Drupal\quant\Plugin\QueueItem\RouteItem;
+use Drupal\Core\Archiver\Zip;
+use Drupal\Core\Archiver\ArchiverException;
 
 class SparkleForm extends FormBase {
 
@@ -26,18 +28,11 @@ class SparkleForm extends FormBase {
         $form['update'] = [
             '#type' => 'managed_file',
             '#title' => $this->t('Update package'),
-            '#description' => $this->t('Update package. If an existing version exists it will be automatically replaced.'),
+            '#description' => $this->t('A zip file containing the main update package (.tar.xz) as well as delta (.delta) files.'),
             '#upload_location' => 'private://sparkle_staging',
             '#upload_validators' => [
-                'file_validate_extensions' => ['tar.xz'],
+                'file_validate_extensions' => ['zip'],
             ],
-        ];
-
-        $form['update_version'] = [
-            '#type' => 'textfield',
-            '#title' => $this->t('Update Version'),
-            '#description' => $this->t('Finalised package will be saved as "XIV on Mac version.tar.xz".'),
-            '#required' => TRUE,
         ];
 
         $form['actions']['#type'] = 'actions';
@@ -56,55 +51,58 @@ class SparkleForm extends FormBase {
 
     public function submitForm(array &$form, FormStateInterface $form_state) {
         
-        $batch = [
-            'title' => $this->t('Processing'),
-            'operations' => [],
-            'init_message' => t('Initializing.'),
-            'progress_message' => t('Estimated time: @estimate.'),
-            'error_message' => t('The process has encountered an error.'),
-        ];
-        
-        $appcast_op = [
-            'op' => 'update_feed',
-            'data' => $form_state
-        ];
+        $file = [];
+        $package = $form_state->getValue('update', 0);
+        if (isset($package[0]) && !empty($package[0])) {
+            $file = File::load($package[0]);
+            $abs = \Drupal::service('file_system')->realpath($file->getFileUri());
+            $zip = new Zip($abs);
+            $files_to_copy = [];
 
-        $package_op = [
-            'op' => 'copy_package',
-            'data' => $form_state
-        ];
+            // Only extract tar.xz and .delta
+            foreach ($zip->listContents() as $archive_file) {
+                if (str_contains($archive_file, 'tar.xz') || str_contains($archive_file, 'delta')) {
+                    array_push($files_to_copy, $archive_file);
+                }
+            }
+            \Drupal::service('messenger')->addMessage(print_r($files_to_copy, TRUE));
+            $zip->extract('private://sparkle_staging/', $files_to_copy);
+            
 
-        $hydrate_op = [
-            'op' => 'hydrate_cdn',
-            'data' => [
-                '/sites/default/files/update_data/xivonmac_appcast.xml',
-                //'/sites/default/files/update_data/XIVonMac' . $form_state->getValue('update_version') . '.tar.xz'
-            ],
-        ];
-        
-        $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'dispatchRequest'], [$appcast_op]];
-        $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'dispatchRequest'], [$package_op]];
-        $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'dispatchRequest'], [$hydrate_op]];
+            $file->delete();
+
+            
+
+            $batch = [
+                'title' => $this->t('Processing'),
+                'operations' => [],
+                'init_message' => t('Initializing.'),
+                'progress_message' => t('Estimated time: @estimate.'),
+                'error_message' => t('The process has encountered an error.'),
+            ];
 
 
-        batch_set($batch);
-    }
+            foreach ($files_to_copy as $file_to_copy) {
+                $source = 'private://sparkle_staging/' . $file_to_copy;
+                $destination = 'public://update_data/' . $file_to_copy;
+                $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
+                $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/' . $file_to_copy]];
+            }
 
-    public static function dispatchRequest($data, &$context) {
-        switch ($data['op']) {
-            case 'update_feed':
-                self::update_feed($data['data']);
-                break;
-            case 'copy_package':
-                self::copy_package($data['data']);
-            case 'hydrate_cdn':
-                self::hydrate_cdn($data['data']);
-            default:
-                break;
+            batch_set($batch);
+
         }
     }
 
-    private static function hydrate_cdn($urls) {
+    private static function copy_file($source, $destination) {
+        $fs_driver = \Drupal::service('file_system');
+        $directory = 'public://update_data';
+        $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
+        copy($source, $destination);
+    }
+
+
+    private static function hydrateCDN($urls) {
         foreach ($urls as $url) {
             try {
                 $item = new RouteItem(['route' => $url]);
@@ -116,52 +114,4 @@ class SparkleForm extends FormBase {
         }
     }
 
-    // Combine these
-    private static function copy_package($form_state) {
-        // Make sure the file system is in a sane state.
-        $fs_driver = \Drupal::service('file_system');
-        $directory = 'public://update_data';
-        $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY);
-
-        $package_version = $form_state->getValue('update_version');
-        $package_file_name = 'XIVonMac' . $package_version . '.tar.xz';
-        $package_file_location = 'public://update_data/' . $package_file_name;
-
-        $package = $form_state->getValue('update', 0);
-        if (isset($package[0]) && !empty($package[0])) {
-            $file = File::load($package[0]);
-            $new_package_file_location = 'private://sparkle_staging/' . $file->getFilename();
-
-            // Copy the new update package into place.
-            copy($new_package_file_location, $package_file_location);
-
-            // Clean up the temporary file.
-            $file->delete();
-            \Drupal::service('messenger')->addMessage("Move new file into place: " . $package_file_location);
-        }
-    }
-
-    private static function update_feed($form_state) {
-        // Make sure the file system is in a sane state.
-        $fs_driver = \Drupal::service('file_system');
-        $directory = 'public://update_data';
-        $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY);
-
-        $appcast_file_name = 'xivonmac_appcast.xml';
-        $appcast_file_location = 'public://update_data/' . $appcast_file_name;
-        
-        // Process files
-        $appcast = $form_state->getValue('appcast', 0);
-        if (isset($appcast[0]) && !empty($appcast[0])) {
-            $file = File::load($appcast[0]);
-            $new_appcast_file_location = 'private://sparkle_staging/' . $file->getFilename();
-
-            // Copy the new AppCast feed into place.
-            copy($new_appcast_file_location, $appcast_file_location);
-
-            // Clean up the temporary file.
-            $file->delete();
-            \Drupal::service('messenger')->addMessage("Move new file into place: " . $appcast_file_location);
-        }
-    }
 }
