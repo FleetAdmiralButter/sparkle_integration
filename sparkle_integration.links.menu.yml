@@ -1,0 +1,6 @@
+sparkle_integration.release:
+  title: 'Release Manager'
+  description: 'Create Sparkle update release'
+  parent: system.admin_content
+  route_name: sparkle_integration.release
+  weight: 30
