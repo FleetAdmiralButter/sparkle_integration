@@ -51,36 +51,39 @@ class SparkleForm extends FormBase {
 
     public function submitForm(array &$form, FormStateInterface $form_state) {
         
-        $file = [];
+        $batch = [
+            'title' => $this->t('Processing'),
+            'operations' => [],
+            'init_message' => t('Drupal is handling your request.'),
+            'progress_message' => t('Estimated time: @estimate.'),
+            'error_message' => t('The release job encountered a fatal error and has been aborted.'),
+        ];
+        
+        $appcast = $form_state->getValue('appcast', 0);
         $package = $form_state->getValue('update', 0);
+
+        if (isset($appcast[0]) && !empty($appcast[0])) {
+            $appcast_file = File::load($appcast[0]);
+            $source = 'private://sparkle_staging/' . $appcast_file->getFilename();
+            $destination = 'public://update_data/xivonmac_appcast.xml';
+            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
+            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/xivonmac_appcast.xml']];
+            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$appcast_file]];
+        }  
+
         if (isset($package[0]) && !empty($package[0])) {
-            $file = File::load($package[0]);
-            $abs = \Drupal::service('file_system')->realpath($file->getFileUri());
+            $package_file = File::load($package[0]);
+            $abs = \Drupal::service('file_system')->realpath($package_file->getFileUri());
             $zip = new Zip($abs);
             $files_to_copy = [];
 
             // Only extract tar.xz and .delta
             foreach ($zip->listContents() as $archive_file) {
-                if (str_contains($archive_file, 'tar.xz') || str_contains($archive_file, 'delta')) {
+                if ((str_contains($archive_file, '.tar.xz') || str_contains($archive_file, '.delta')) && !(str_contains($archive_file, 'MACOSX'))) {
                     array_push($files_to_copy, $archive_file);
                 }
             }
-            \Drupal::service('messenger')->addMessage(print_r($files_to_copy, TRUE));
             $zip->extract('private://sparkle_staging/', $files_to_copy);
-            
-
-            $file->delete();
-
-            
-
-            $batch = [
-                'title' => $this->t('Processing'),
-                'operations' => [],
-                'init_message' => t('Initializing.'),
-                'progress_message' => t('Estimated time: @estimate.'),
-                'error_message' => t('The process has encountered an error.'),
-            ];
-
 
             foreach ($files_to_copy as $file_to_copy) {
                 $source = 'private://sparkle_staging/' . $file_to_copy;
@@ -88,13 +91,18 @@ class SparkleForm extends FormBase {
                 $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
                 $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/' . $file_to_copy]];
             }
-
-            batch_set($batch);
+            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$package_file]];
 
         }
+        if (empty($batch['operations'])) {
+            \Drupal::service('messenger')->addMessage('Nothing to do!');
+        } else {
+            batch_set($batch);
+        }
+
     }
 
-    private static function copy_file($source, $destination) {
+    public static function copyFile($source, $destination) {
         $fs_driver = \Drupal::service('file_system');
         $directory = 'public://update_data';
         $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
@@ -102,16 +110,18 @@ class SparkleForm extends FormBase {
     }
 
 
-    private static function hydrateCDN($urls) {
-        foreach ($urls as $url) {
-            try {
-                $item = new RouteItem(['route' => $url]);
-                $item->send();
-                \Drupal::service('messenger')->addMessage('Successfully pushed ' . $url . ' to QuantCDN.');
-            } catch (\Exception $e) {
-                \Drupal::service('messenger')->addError('Error connecting to QuantCDN');
-            }
+    public static function hydrateCDN($url) {
+        try {
+            $item = new RouteItem(['route' => $url]);
+            $item->send();
+            \Drupal::service('messenger')->addMessage('Successfully pushed ' . $url . ' to QuantCDN.');
+        } catch (\Exception $e) {
+            \Drupal::service('messenger')->addError('Error connecting to QuantCDN');
         }
+    }
+
+    public static function clean(File $file) {
+        $file->delete();
     }
 
 }
