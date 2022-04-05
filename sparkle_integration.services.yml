@@ -1,0 +1,8 @@
+services:
+  sparkle_integration.social_announcement:
+    class: Drupal\sparkle_integration\SocialAnnouncement
+  sparkle_integration.commands:
+    class: \Drupal\sparkle_integration\Commands\TestCommands
+    tags:
+      - { name: drush.command }
+    arguments: []

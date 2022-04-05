@@ -46,6 +46,13 @@ class SparkleForm extends FormBase {
             ],
         ];
 
+        $form['sparkle']['social_post'] = [
+            '#type' => 'checkbox',
+            '#title' => $this->t('Post release to social channels? (Discord and front page)'),
+            '#description' => $this->t('Untick if re-releasing the same version for some reason.'),
+            '#default_value' => TRUE,
+        ];
+
         $form['patcher'] = [
             '#title' => $this->t('Patcher Updates'),
             '#type' => 'fieldset',
@@ -91,8 +98,7 @@ class SparkleForm extends FormBase {
      * 1) Ingest the uploaded XML, ZIP, TXT files into a private staging folder.
      * 2) If the file is a ZIP, extract only relevant content (ignoring _MACOSX directories).
      * 3) Copy all files into the relevant public folder (either update_data or seventh_dawn).
-     * 4) Notify the CDN of new content and push any updates files.
-     * 5) Clean up the staging folder.
+     * 4) Clean up the staging folder.
      * 
      * There is some duplicated code in here which should be cleaned up, but for now everything is stable.
      */
@@ -116,7 +122,7 @@ class SparkleForm extends FormBase {
             $source = 'private://release_manager_staging/' . $appcast_file->getFilename();
             $destination = 'public://update_data/xivonmac_appcast.xml';
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/xivonmac_appcast.xml']];
+            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/xivonmac_appcast.xml']];
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$appcast_file]];
         }  
 
@@ -138,7 +144,7 @@ class SparkleForm extends FormBase {
                 $source = 'private://release_manager_staging/' . $file_to_copy;
                 $destination = 'public://update_data/' . $file_to_copy;
                 $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-                $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/' . $file_to_copy]];
+                //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/' . $file_to_copy]];
             }
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$package_file]];
 
@@ -150,7 +156,7 @@ class SparkleForm extends FormBase {
             $source = 'private://release_manager_staging/' . $patcher_feed_file->getFilename();
             $destination = 'public://seventh_dawn/version.txt';
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/version.txt']];
+            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/version.txt']];
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$patcher_feed_file]];
         }
 
@@ -159,9 +165,13 @@ class SparkleForm extends FormBase {
             $source = 'private://release_manager_staging/' . $patcher_update_file->getFilename();
             $destination = 'public://seventh_dawn/PatchInstaller.zip';
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/PatchInstaller.zip']];
+            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/PatchInstaller.zip']];
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$patcher_update_file]];
         }
+        if ($form_state->getValue('social_post') == TRUE) {
+            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'postAppcastToDiscord'], []];
+        }
+        
 
 
         if (empty($batch['operations'])) {
@@ -182,6 +192,7 @@ class SparkleForm extends FormBase {
         $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
         $fs_driver->prepareDirectory($patcher_directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
         copy($source, $destination);
+        \Drupal::service('messenger')->addMessage('Deployed ' . $destination . ' to Seventh Dawn.');
     }
 
 
@@ -203,6 +214,10 @@ class SparkleForm extends FormBase {
      */
     public static function clean(File $file) {
         $file->delete();
+    }
+
+    public static function postAppcastToDiscord() {
+        \Drupal::service('sparkle_integration.social_announcement')->postAppcastToDiscord();
     }
 
 }
