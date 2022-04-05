@@ -1,6 +1,7 @@
 services:
   sparkle_integration.social_announcement:
     class: Drupal\sparkle_integration\SocialAnnouncement
+    arguments: ['@http_client']
   sparkle_integration.commands:
     class: \Drupal\sparkle_integration\Commands\TestCommands
     tags:

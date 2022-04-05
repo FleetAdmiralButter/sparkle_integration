@@ -5,15 +5,16 @@ namespace Drupal\sparkle_integration;
 use Drupal\Core\Site\Settings;
 use Drupal\Component\Serialization\Json;
 use Symfony\Component\Serializer\Encoder;
+use GuzzleHttp\Client;
 
 class SocialAnnouncement {
 
     private $webhook_url;
     private $http_client;
-    public function __construct() {
+    public function __construct(Client $http_client) {
         // Read the webhook URL from the environment.
         $this->webhook_url = Settings::get('sparkle_integration.webhook_url');
-        $this->http_client = \Drupal::service('http_client');
+        $this->http_client = $http_client;
     }
 
     public function postAppcastToDiscord() {
