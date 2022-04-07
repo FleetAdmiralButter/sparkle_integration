@@ -1,10 +1,16 @@
 services:
   sparkle_integration.social_announcement:
     class: Drupal\sparkle_integration\SocialAnnouncement
-    arguments: ['@sparkle_integration.discord_helper']
+    arguments: ['@sparkle_integration.discord_helper', '@sparkle_integration.feed_helper', '@sparkle_integration.appcast_helper']
   sparkle_integration.discord_helper:
     class: Drupal\sparkle_integration\Socials\DiscordHelper
     arguments: ['@http_client']
+  sparkle_integration.feed_helper:
+    class: Drupal\sparkle_integration\Socials\FeedHelper
+    arguments: []
+  sparkle_integration.appcast_helper:
+    class: Drupal\sparkle_integration\Socials\AppcastHelper
+    arguments: []
   sparkle_integration.commands:
     class: \Drupal\sparkle_integration\Commands\TestCommands
     tags:

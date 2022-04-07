@@ -2,22 +2,23 @@
 
 namespace Drupal\sparkle_integration;
 
-use Drupal\Core\Site\Settings;
-use Drupal\Component\Serialization\Json;
 use Drupal\sparkle_integration\Socials\DiscordHelper;
-use Symfony\Component\Serializer\Encoder;
-use GuzzleHttp\Client;
+use Drupal\sparkle_integration\Socials\FeedHelper;
+use Drupal\sparkle_integration\Socials\AppcastHelper;
 
 class SocialAnnouncement {
 
     private $discord_helper;
     private $feed_helper;
-    public function __construct(DiscordHelper $discord_helper) {
+    private $appcast_helper;
+    public function __construct(DiscordHelper $discord_helper, FeedHelper $feed_helper, AppcastHelper $appcast_helper) {
         $this->discord_helper = $discord_helper;
+        $this->feed_helper = $feed_helper;
+        $this->appcast_helper = $appcast_helper;
     }
 
     public function postAppcastToDiscord() {
-        $appcast = $this->discord_helper->parseAppcast();
+        $appcast = $this->appcast_helper->parseAppcast();
         $description = $this->discord_helper->templateChangelogEntries($appcast['changelogEntries']);
         $message = $this->discord_helper->templateMessage($appcast['version'], $description);
         $this->discord_helper->postDiscordMessage($message);
