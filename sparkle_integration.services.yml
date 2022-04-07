@@ -1,6 +1,9 @@
 services:
   sparkle_integration.social_announcement:
     class: Drupal\sparkle_integration\SocialAnnouncement
+    arguments: ['@sparkle_integration.discord_helper']
+  sparkle_integration.discord_helper:
+    class: Drupal\sparkle_integration\Socials\DiscordHelper
     arguments: ['@http_client']
   sparkle_integration.commands:
     class: \Drupal\sparkle_integration\Commands\TestCommands

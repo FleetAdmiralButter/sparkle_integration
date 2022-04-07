@@ -17,4 +17,16 @@ class TestCommands extends DrushCommands {
     public function testDiscord() {
         \Drupal::service('sparkle_integration.social_announcement')->postAppcastToDiscord();
     }
+
+    /**
+     * Test Discord integration.
+     * 
+     * @command sparkle:feed
+     * @aliases sparkle-feed
+     * 
+     * @usage sparkle:feed
+     */
+    public function testFeedUpdate() {
+
+    }
 }
