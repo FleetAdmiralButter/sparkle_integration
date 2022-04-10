@@ -13,16 +13,34 @@ class FeedHelper {
 
     }
 
-    public function templateFeedEntry($version, $description, $date) {
+    public function updateFeed($message) {
+        $homepage = \Drupal::entityTypeManager()->getStorage('node')->load(1);
+        $feed = $homepage->get('body')->getString();
+        $feed = $message . $feed;
+        $homepage->set('body', ['value' => $feed, 'format' => 'markdown']);
+        $homepage->save();
+    }
+
+    public function templateChangelogEntries($changelogEntries) {
+        $result = "";
+        foreach ($changelogEntries as $changelogEntry) {
+            $result .= '• ' . $changelogEntry . "<br>";
+        }
+        return $result;
+    }
+
+    public function templateMessage($version, $description) {
         return <<<EOT
+        \r\n
         <strong>April 4th, 2022:</strong><br><br>
         <b>Delta updates</b> <i>(Updated through application)</i><br><br>
 
-        -Delta Changelog: 3.4.5 Beta
+        Delta Changelog: $version Beta
 
         $description
 
         ---
+        \r\n
         EOT;
     }
 }

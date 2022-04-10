@@ -24,4 +24,11 @@ class SocialAnnouncement {
         $this->discord_helper->postDiscordMessage($message);
     }
 
+    public function postAppcastToFeed() {
+        $appcast = $this->appcast_helper->parseAppcast();
+        $description = $this->feed_helper->templateChangelogEntries($appcast['changelogEntries']);
+        $message = $this->feed_helper->templateMessage($appcast['version'], $description);
+        $this->feed_helper->updateFeed($message);
+    }
+
 }

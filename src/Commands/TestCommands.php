@@ -27,6 +27,6 @@ class TestCommands extends DrushCommands {
      * @usage sparkle:feed
      */
     public function testFeedUpdate() {
-
+        \Drupal::service('sparkle_integration.social_announcement')->postAppcastToFeed();
     }
 }
