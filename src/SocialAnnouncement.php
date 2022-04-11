@@ -5,6 +5,7 @@ namespace Drupal\sparkle_integration;
 use Drupal\sparkle_integration\Socials\DiscordHelper;
 use Drupal\sparkle_integration\Socials\FeedHelper;
 use Drupal\sparkle_integration\Socials\AppcastHelper;
+use Drupal\Core\Datetime\DrupalDateTime;
 
 class SocialAnnouncement {
 
@@ -25,9 +26,11 @@ class SocialAnnouncement {
     }
 
     public function postAppcastToFeed() {
+        $date = new DrupalDateTime('now');
+        $date = $date->format('F j, Y');
         $appcast = $this->appcast_helper->parseAppcast();
         $description = $this->feed_helper->templateChangelogEntries($appcast['changelogEntries']);
-        $message = $this->feed_helper->templateMessage($appcast['version'], $description);
+        $message = $this->feed_helper->templateMessage($appcast['version'], $description, $date);
         $this->feed_helper->updateFeed($message);
     }
 

@@ -7,6 +7,7 @@ use Drupal\Component\Serialization\Json;
 use Symfony\Component\Serializer\Encoder;
 use GuzzleHttp\Client;
 
+
 class FeedHelper {
 
     public function __construct() {
@@ -29,10 +30,10 @@ class FeedHelper {
         return $result;
     }
 
-    public function templateMessage($version, $description) {
+    public function templateMessage($version, $description, $date) {
         return <<<EOT
         \r\n
-        <strong>April 4th, 2022:</strong><br><br>
+        <strong>$date:</strong><br><br>
         <b>Delta updates</b> <i>(Updated through application)</i><br><br>
 
         Delta Changelog: $version Beta

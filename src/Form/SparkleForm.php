@@ -218,6 +218,7 @@ class SparkleForm extends FormBase {
 
     public static function postAppcastToDiscord() {
         \Drupal::service('sparkle_integration.social_announcement')->postAppcastToDiscord();
+        \Drupal::service('sparkle_integration.social_announcement')->postAppcastToFeed();
     }
 
 }
