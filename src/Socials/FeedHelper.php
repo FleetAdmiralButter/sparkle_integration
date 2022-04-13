@@ -16,7 +16,7 @@ class FeedHelper {
 
     public function updateFeed($message) {
         $homepage = \Drupal::entityTypeManager()->getStorage('node')->load(1);
-        $feed = $homepage->get('body')->getString();
+        $feed = $homepage->get('body')[0]->value;
         $feed = $message . $feed;
         $homepage->set('body', ['value' => $feed, 'format' => 'markdown']);
         $homepage->save();
