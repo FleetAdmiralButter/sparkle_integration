@@ -29,4 +29,16 @@ class TestCommands extends DrushCommands {
     public function testFeedUpdate() {
         \Drupal::service('sparkle_integration.social_announcement')->postAppcastToFeed();
     }
+
+    /**
+     * Poll SE's Appcast feed.
+     * 
+     * @command sparkle:secheck
+     * @aliases sparkle-secheck
+     * 
+     * @usage sparkle:secheck
+     */
+    public function SECheck() {
+        \Drupal::service('sparkle_integration.se_update_scanner')->checkAndNotify();
+    }
 }

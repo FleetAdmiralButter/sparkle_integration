@@ -11,6 +11,9 @@ services:
   sparkle_integration.appcast_helper:
     class: Drupal\sparkle_integration\Socials\AppcastHelper
     arguments: []
+  sparkle_integration.se_update_scanner:
+    class: Drupal\sparkle_integration\Socials\SEUpdateScanner
+    arguments: ['@http_client']
   sparkle_integration.commands:
     class: \Drupal\sparkle_integration\Commands\TestCommands
     tags:
