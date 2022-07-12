@@ -5,3 +5,17 @@ sparkle_integration.release:
     _form: 'Drupal\sparkle_integration\Form\SparkleForm'
   requirements:
     _permission: 'administer app releases'
+sparkle_integration.gate_check:
+  path: /xivmac/gatecheck
+  defaults:
+    _controller: 'Drupal\sparkle_integration\Controller\GateCheckController::checkGate'
+  methods: [GET]
+  requirements:
+    _permission: 'access content'
+sparkle_integration.login_check:
+  path: /xivmac/logincheck
+  defaults:
+    _controller: 'Drupal\sparkle_integration\Controller\GateCheckController::checkLogin'
+  methods: [GET]
+  requirements:
+    _permission: 'access content'

@@ -105,11 +105,11 @@ class SparkleForm extends FormBase {
     public function submitForm(array &$form, FormStateInterface $form_state) {
         
         $batch = [
-            'title' => $this->t('Processing'),
+            'title' => $this->t('Casting'),
             'operations' => [],
-            'init_message' => t('Drupal is handling your request.'),
-            'progress_message' => t('Estimated time: @estimate.'),
-            'error_message' => t('The release job encountered a fatal error and has been aborted.'),
+            'init_message' => t('@estimate.'),
+            'progress_message' => t('@estimate.'),
+            'error_message' => t('XXX Interrupted'),
         ];
         
         $appcast = $form_state->getValue('appcast', 0);
@@ -192,7 +192,7 @@ class SparkleForm extends FormBase {
         $fs_driver->prepareDirectory($directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
         $fs_driver->prepareDirectory($patcher_directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
         copy($source, $destination);
-        \Drupal::service('messenger')->addMessage('Deployed ' . $destination . ' to Seventh Dawn.');
+        \Drupal::service('messenger')->addMessage('Pushed ' . $destination . ' to softwareupdate.xivmac.com!');
     }
 
 
