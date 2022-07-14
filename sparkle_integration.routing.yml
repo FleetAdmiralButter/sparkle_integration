@@ -19,3 +19,10 @@ sparkle_integration.login_check:
   methods: [GET]
   requirements:
     _permission: 'access content'
+sparkle_integration.dalamud_check:
+  path: /xivmac/dalamudcheck
+  defaults:
+    _controller: 'Drupal\sparkle_integration\Controller\GateCheckController::checkDalamud'
+  methods: [GET]
+  requirements:
+    _permission: 'access content'
