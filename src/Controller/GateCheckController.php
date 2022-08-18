@@ -2,7 +2,6 @@
 
 namespace Drupal\sparkle_integration\Controller;
 
-use Drupal\Component\Serialization\Json;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Controller\ControllerBase;
 use GuzzleHttp\Client;
@@ -45,9 +44,15 @@ class GateCheckController extends ControllerBase {
 
   public function checkDalamud() {
     try {
-      $thaliak_response = $this->http_client->get('https://thaliak.xiv.dev/api/versions/4e9a232b/latest')->getBody()->getContents();
+      $gql = '{"query":"query GetLatestGameVersion {  repository(slug:\"4e9a232b\") {    latestVersion {      versionString    }  }}"}';
+      $thaliak_response = $this->http_client->request('POST', 'https://thaliak.xiv.dev/graphql/', [
+        'body' => $gql,
+        'headers' => [
+          'Content-Type' => 'application/json',
+        ],
+      ])->getBody()->getContents();
       $thaliak_response = json_decode($thaliak_response, TRUE);
-      $latest_game_ver = $thaliak_response[0]['version'];
+      $latest_game_ver = $thaliak_response['data']['repository']['latestVersion']['versionString'];
       $dalamud_meta_url = 'https://kamori.goats.dev/Dalamud/Release/VersionInfo?track=release&appId=xom';
       $dalamud_meta = $this->http_client->get($dalamud_meta_url)->getBody()->getContents();
       $dalamud_meta = json_decode($dalamud_meta, TRUE);
