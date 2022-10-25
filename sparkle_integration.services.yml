@@ -19,3 +19,11 @@ services:
     tags:
       - { name: drush.command }
     arguments: []
+  sparkle_integration.iinact_commands:
+    class: \Drupal\sparkle_integration\IINACT\IINACTCommands
+    tags:
+      - { name: drush.command }
+    arguments: []
+  sparkle_integration.iinact_update_manager:
+    class: Drupal\sparkle_integration\IINACT\IINACTUpdateManager
+    arguments: ['@cache.default', '@http_client']

@@ -1,0 +1,8 @@
+<?php
+
+/**
+ * Implements hook_rebuild().
+ */
+function sparkle_integration_rebuild() {
+  \Drupal::service('sparkle_integration.iinact_update_manager')->pluginGetLatest();
+}

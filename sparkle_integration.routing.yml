@@ -26,3 +26,17 @@ sparkle_integration.dalamud_check:
   methods: [GET]
   requirements:
     _permission: 'access content'
+sparkle_integration.iinact_plugin:
+  path: /iinact/plugin/latest
+  defaults:
+    _controller: 'Drupal\sparkle_integration\IINACT\IINACTUpdateEndpoint::serve'
+  methods: [GET]
+  requirements:
+    _permission: 'access content'
+sparkle_integration.iinact_plugin_url:
+  path: /iinact/plugin/latest/download
+  defaults:
+    _controller: 'Drupal\sparkle_integration\IINACT\IINACTUpdateEndpoint::serveDownload'
+  methods: [GET]
+  requirements:
+    _permission: 'access content'
