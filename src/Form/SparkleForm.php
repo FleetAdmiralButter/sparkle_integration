@@ -53,30 +53,6 @@ class SparkleForm extends FormBase {
             '#default_value' => TRUE,
         ];
 
-        $form['patcher'] = [
-            '#title' => $this->t('Patcher Updates'),
-            '#type' => 'fieldset',
-        ];
-
-        $form['patcher']['patcher_version_feed'] = [
-            '#type' => 'managed_file',
-            '#title' => $this->t('Patcher version feed'),
-            '#description' => $this->t('A txt file container the patcher version info. The file will be renamed and existing file will be replaced automatically.'),
-            '#upload_location' => 'private://release_manager_staging',
-            '#upload_validators' => [
-                'file_validate_extensions' => ['txt'],
-            ],
-        ];
-
-        $form['patcher']['patcher_update'] = [
-            '#type' => 'managed_file',
-            '#title' => $this->t('Patcher update package'),
-            '#description' => $this->t('A zip file container the patcher update data. The file will be renamed and existing file will be replaced automatically.'),
-            '#upload_location' => 'private://release_manager_staging',
-            '#upload_validators' => [
-                'file_validate_extensions' => ['zip'],
-            ],
-        ];
 
         $form['actions']['#type'] = 'actions';
         $form['actions']['submit'] = [
@@ -107,22 +83,19 @@ class SparkleForm extends FormBase {
         $batch = [
             'title' => $this->t('Casting'),
             'operations' => [],
-            'init_message' => t('@estimate.'),
+            'init_message' => t('Getting ready...'),
             'progress_message' => t('@estimate.'),
             'error_message' => t('XXX Interrupted'),
         ];
         
         $appcast = $form_state->getValue('appcast', 0);
         $package = $form_state->getValue('update', 0);
-        $patcher_feed = $form_state->getValue('patcher_version_feed', 0);
-        $patcher_update = $form_state->getValue('patcher_update', 0);        
         
         if (isset($appcast[0]) && !empty($appcast[0])) {
             $appcast_file = File::load($appcast[0]);
             $source = 'private://release_manager_staging/' . $appcast_file->getFilename();
             $destination = 'public://update_data/xivonmac_appcast.xml';
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/xivonmac_appcast.xml']];
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$appcast_file]];
         }  
 
@@ -144,42 +117,20 @@ class SparkleForm extends FormBase {
                 $source = 'private://release_manager_staging/' . $file_to_copy;
                 $destination = 'public://update_data/' . $file_to_copy;
                 $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-                //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/update_data/' . $file_to_copy]];
             }
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$package_file]];
 
         }
 
-
-        if (isset($patcher_feed[0]) && !empty($patcher_feed[0])) {
-            $patcher_feed_file = File::load($patcher_feed[0]);
-            $source = 'private://release_manager_staging/' . $patcher_feed_file->getFilename();
-            $destination = 'public://seventh_dawn/version.txt';
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/version.txt']];
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$patcher_feed_file]];
-        }
-
-        if (isset($patcher_update[0]) && !empty($patcher_update[0])) {
-            $patcher_update_file = File::load($patcher_update[0]);
-            $source = 'private://release_manager_staging/' . $patcher_update_file->getFilename();
-            $destination = 'public://seventh_dawn/PatchInstaller.zip';
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'copyFile'], [$source, $destination]];
-            //$batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'hydrateCDN'], ['/sites/default/files/seventh_dawn/PatchInstaller.zip']];
-            $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'clean'], [$patcher_update_file]];
-        }
         if ($form_state->getValue('social_post') == TRUE) {
             $batch['operations'][] = [['\Drupal\sparkle_integration\Form\SparkleForm', 'postAppcastToDiscord'], []];
         }
-        
-
 
         if (empty($batch['operations'])) {
             \Drupal::service('messenger')->addMessage('Nothing to do!');
         } else {
             batch_set($batch);
         }
-
     }
 
     /**
@@ -193,20 +144,6 @@ class SparkleForm extends FormBase {
         $fs_driver->prepareDirectory($patcher_directory, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
         copy($source, $destination);
         \Drupal::service('messenger')->addMessage('Pushed ' . $destination . ' to softwareupdate.xivmac.com!');
-    }
-
-
-    /**
-     * Pushes new files on disk to the CDN.
-     */
-    public static function hydrateCDN($url) {
-        try {
-            $item = new RouteItem(['route' => $url]);
-            $item->send();
-            \Drupal::service('messenger')->addMessage('Successfully pushed ' . $url . ' to QuantCDN.');
-        } catch (\Exception $e) {
-            \Drupal::service('messenger')->addError('Error connecting to QuantCDN');
-        }
     }
 
     /**
