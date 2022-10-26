@@ -5,8 +5,8 @@ namespace Drupal\sparkle_integration\IINACT;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\Response;
 use Drupal\Core\Routing\TrustedRedirectResponse;
+use Drupal\Core\Cache\CacheableResponse;
 
 /**
  * Class IINACTUpdateEndpoint
@@ -33,7 +33,9 @@ class IINACTUpdateEndpoint extends ControllerBase {
       \Drupal::service('sparkle_integration.iinact_update_manager')->pluginGetLatest();
       $version = $this->fetchFromCache('iinact_plugin_latest');
     }
-    return new Response($version, 200, ['X-IINACT-Origin-Cache-Status' => $hit]);
+    $response = new CacheableResponse($version, 200, ['X-IINACT-Origin-Cache-Status' => $hit]);
+    $response->getCacheableMetadata()->addCacheTags(['iinact_plugin_latest']);
+    return $response;
   }
 
   public function serveDownload() {

@@ -33,8 +33,13 @@ class IINACTUpdateManager {
     }
 
     private function updateCachedPluginVersion($version, $url) {
-      Cache::invalidateTags(['iinact_plugin_latest']);
-      $this->cache->set('iinact_plugin_latest_url', $url, CacheBackendInterface::CACHE_PERMANENT, ['iinact_plugin_latest']);
-      $this->cache->set('iinact_plugin_latest', $version, CacheBackendInterface::CACHE_PERMANENT, ['iinact_plugin_latest']);
+      $old_version = $this->cache->get('iinact_plugin_latest', FALSE)->data;
+      if ($old_version != $version) {
+        Cache::invalidateTags(['iinact_plugin_latest']);
+        $this->cache->set('iinact_plugin_latest_url', $url, CacheBackendInterface::CACHE_PERMANENT, ['iinact_plugin_latest']);
+        $this->cache->set('iinact_plugin_latest', $version, CacheBackendInterface::CACHE_PERMANENT, ['iinact_plugin_latest']);
+      } else {
+        \Drupal::logger('sparkle_integration')->debug('IINACT: Cache sync skipped.');
+      }
     }
 }
